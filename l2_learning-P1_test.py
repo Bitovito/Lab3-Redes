@@ -176,41 +176,31 @@ class LearningSwitch (object):
         mac_dst = str(packet.dst)
         dst_port = -1
 
+        host_port = [1, 2, 3, 4, 5, 6, 7, 8]
+
         if packet.find("icmp"):
-          if puerto in [1, 2, 10]:
-            if mac_dst == "00:00:00:00:00:01":
-              dst_port = 1
-            elif mac_dst == "00:00:00:00:00:02":
-              dst_port = 2
-            else:
-              dst_port = 17
+          ## Si llega por el puerto 12, se asume los host adjacentes son el 1 y el 2.
+          ##   entonces, si la direccion mac de destino, su ultimo digito, es "1"
+          ##   o "2", entra por dicho puerto. Que convenientemente, para un host x, el
+          ##   puerto desde su switch es x.
+          if(mac_dst[-1] in str(puerto)):
+            dst_port = int(mac_dst[-1])
 
-          elif puerto in [3, 4, 11]:
-            if mac_dst == "00:00:00:00:00:03":
-              dst_port = 3
-            elif mac_dst == "00:00:00:00:00:04":
-              dst_port = 4
-            else:
-              dst_port = 14
-
-          elif puerto in [5, 6, 12]:
-            if mac_dst == "00:00:00:00:00:05":
-              dst_port = 5
-            elif mac_dst == "00:00:00:00:00:06":
-              dst_port = 6
-            else:
-              dst_port = 15
-
-          elif puerto in [7, 8, 13]:
-            if mac_dst == "00:00:00:00:00:07":
-              dst_port = 7
-            elif mac_dst == "00:00:00:00:00:08":
-              dst_port = 8
-            else:
-              dst_port = 16
-
+          ## Si no, el puerto que dirige en el sentido especificado por enunciado, se
+          ##   penso de la forma: Si la llegada es 12, la salida al siguiente switch es
+          ##   21 (Numero invertido)
           else:
-            print("Desconocido.\n")
+
+            ## Si el origen es un host, todo el miombo anterior deja de funcionar.
+            ##   a partir de la paridad del puerto, se determina el puerto del host
+            ##   continuo, y con esto se construye el puerto de salida.
+            if(puerto in host_port):
+              if(puerto % 2 == 0):
+                puerto = str(puerto-1) + str(puerto)
+              else:
+                puerto = str(puerto) + str(puerto+1)
+
+            dst_port = int(str(puerto)[::-1])
 
           print("=============================================================")
           print("Entrando por  : ", puerto)

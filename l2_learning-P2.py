@@ -24,6 +24,7 @@ from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpid_to_str, str_to_dpid
 from pox.lib.util import str_to_bool
+from pox.lib.addresses import EthAddr
 import time
 
 log = core.getLogger()
@@ -90,6 +91,21 @@ class LearningSwitch (object):
 
     #log.debug("Initializing LearningSwitch, transparent=%s",
     #          str(self.transparent))
+
+  def _handle_ConnectionUp(self, event):
+    ## Firewall Host-Host
+    host_mac = ["00:00:00:00:00:01", "00:00:00:00:00:02", "00:00:00:00:00:03", "00:00:00:00:00:04"]
+    for src in host_mac:
+      for dst in host_mac:
+        deny        = of.ofp_match()
+        deny.dl_src = EthAddr(src)
+        deny.dl_dst = EthAddr(dst)
+
+        flow_mod    = of.ofp_flow_mod
+        flow_mod.match = deny
+
+        event.connection.send(flow_mod)
+        print("Firewall registrado agregado.\n")
 
   def _handle_PacketIn (self, event):
     """
@@ -170,47 +186,45 @@ class LearningSwitch (object):
         msg.idle_timeout = 10
         msg.hard_timeout = 30
 
-	## Lab 3 P1 Start
+	## Lab 3 P2 Start
         puerto = event.port
         mac_src = str(packet.src)
         mac_dst = str(packet.dst)
         dst_port = -1
 
+        host_mac                       = ["1", "2", "3", "4"]
+        host_ports                     = [1, 2, 3, 4, 5, 6, 7] # 7 its a simplicity: make link s1 s2 easiest 
+        directional_inputs_ports       = [12, 34]              # DIP
+
+        directional_output_forwarding  = 100 # DOF
+        directional_output_pass        = 101 # DOP
+
+        directional_input_switchToHost = 14  # DISTH, Switch to host 1-4
+        directional_input_switchToServ = 56  # DISTS, Switch to server 5-6
+
         if packet.find("icmp"):
-          if puerto in [1, 2, 10]:
-            if mac_dst == "00:00:00:00:00:01":
-              dst_port = 1
-            elif mac_dst == "00:00:00:00:00:02":
-              dst_port = 2
-            else:
-              dst_port = 17
 
-          elif puerto in [3, 4, 11]:
-            if mac_dst == "00:00:00:00:00:03":
-              dst_port = 3
-            elif mac_dst == "00:00:00:00:00:04":
-              dst_port = 4
-            else:
-              dst_port = 14
+          # Host-Switch
+          if puerto in host_ports:
+            dst_port = directional_output_forwarding
 
-          elif puerto in [5, 6, 12]:
-            if mac_dst == "00:00:00:00:00:05":
-              dst_port = 5
-            elif mac_dst == "00:00:00:00:00:06":
-              dst_port = 6
-            else:
-              dst_port = 15
+          # Switch 3,4 - Switch 1-2
+          elif puerto in directional_inputs:
 
-          elif puerto in [7, 8, 13]:
-            if mac_dst == "00:00:00:00:00:07":
-              dst_port = 7
-            elif mac_dst == "00:00:00:00:00:08":
-              dst_port = 8
+            # Debe forwardear al switch inferior o pasar?
+            if mac_dst[-1] in list(str(puerto)):
+              dst_port = directional_output_forwarding
             else:
-              dst_port = 16
+              dst_port = directional_output_pass
+
+          # Switch-Host
+          elif puerto == directional_input_switchToHost:
+
+            # Puerto equivale al ultimo digito de direccion MAC
+            dst_port = int(mac_dst[-1])
 
           else:
-            print("Desconocido.\n")
+            print("Desconocido.")
 
           print("=============================================================")
           print("Entrando por  : ", puerto)
