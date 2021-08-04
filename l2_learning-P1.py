@@ -142,7 +142,14 @@ class LearningSwitch (object):
         msg.in_port = event.port
         self.connection.send(msg)
 
-    self.macToPort[packet.src] = event.port # 1
+
+    host_port = [1, 2, 3, 4, 5, 6, 7, 8]
+
+    if event.port in host_port:
+      self.macToPort[packet.src] = event.port # 1
+    else:
+      if packet.dst not in self.macToPort and packet.find("icmp"):
+        self.macToPort[packet.dst] = 9
 
     if not self.transparent: # 2
       if packet.type == packet.LLDP_TYPE or packet.dst.isBridgeFiltered():
@@ -166,31 +173,18 @@ class LearningSwitch (object):
         log.debug("installing flow for %s.%i -> %s.%i" %
                   (packet.src, event.port, packet.dst, port))
         msg = of.ofp_flow_mod()
-        #msg.match = of.ofp_match.from_packet(packet, event.port)
-        msg.match = of.ofp_matc(dl_dst=packet.dst)
+        msg.match = of.ofp_match.from_packet(packet, event.port)
         msg.idle_timeout = 10
         msg.hard_timeout = 30
 
-	    ## Lab 3 P1 Start
-        puerto = event.port
-        mac_src = str(packet.src)
-        mac_dst = str(packet.dst)
+        if packet.find("icmp"):
+          print("================================================")
+          print("Entrando por: ", event.port)
+          print("Saliendo por: ", self.macToPort[packet.dst])
+          print(self.macToPort)
 
-        host_port = [1, 2, 3, 4, 5, 6, 7, 8]
-        if(puerto in host_port):
-          self.macToPort[mac_dst] = puerto
 
-        if(mac_dst not in self.macToPort):
-          self.macToPort[mac_dst] = 9
-
-        if(packet.find("icp")):
-          print("=============================================================")
-          print("Entrando por  : ", puerto)
-          print("Desde la mac  : ", mac_src)
-          print("Hacia la mac  : ", mac_dst)
-          print("Redirigiendo a: ", self.macToPort[mac_dst])
-
-        msg.actions.append(of.ofp_action_output(port = self.macToPort[mac_dst]))
+        msg.actions.append(of.ofp_action_output(port = port))
         msg.data = event.ofp # 6a
         self.connection.send(msg)
 
