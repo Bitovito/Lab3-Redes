@@ -158,23 +158,15 @@ class LearningSwitch (object):
         msg.idle_timeout = 10
         msg.hard_timeout = 30
 
-
-        ## Confiamos en el controlador para el ruteo inicial. Luego,
-        ##  para cada intento de comunicacion, si la regla de la tabla
-        ##  exige tomar un camino contrario (Puertos > 10) modificamos
-        ##  la regla para ese destino (packet.dst)
-
-        ## En enunciado solo mencionan comunicacion por ping, para ir a la segura
-        ##  me limite a icmp
         if packet.find("icmp"):
-          if self.macToPort[packet.dst] > 10:
-            msg.match   = of.ofp_match(dl_dst=packet.dst)   ## Buscar normas para llegar a este destino
-            msg.command = of.OFPFC_MODIFY                   ## El comando por defecto es agregar, ahora modificaremos
-            self.macToPort[packet.dst] = 9                  ## 9 es el puerto que tiene cada switch en la direccion corrcta
 
-          ## Permite trazar camino del paquete
-          ## La seleccion de los puertos de llegada, son de la forma "1x", x es
-          ##  el digito que representa al switch (1-4).
+          if self.macToPort[packet.dst] > 10:
+
+            msg.match   = of.ofp_match(dl_dst=packet.dst)
+            msg.command = of.OFPFC_MODIFY
+
+            self.macToPort[packet.dst] = 9
+
           print("=============================================================")
           print("Puerto de llegada: ", event.port)
           print("Desde MAC        : ", packet.src)

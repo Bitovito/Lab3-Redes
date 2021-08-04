@@ -24,7 +24,6 @@ from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpid_to_str, str_to_dpid
 from pox.lib.util import str_to_bool
-from pox.lib.addresses import EthAddr
 import time
 
 log = core.getLogger()
@@ -92,21 +91,6 @@ class LearningSwitch (object):
     #log.debug("Initializing LearningSwitch, transparent=%s",
     #          str(self.transparent))
 
-  def _handle_ConnectionUp(self, event):
-    ## Firewall Host-Host
-    host_mac = ["00:00:00:00:00:01", "00:00:00:00:00:02", "00:00:00:00:00:03", "00:00:00:00:00:04"]
-    for src in host_mac:
-      for dst in host_mac:
-        deny        = of.ofp_match()
-        deny.dl_src = EthAddr(src)
-        deny.dl_dst = EthAddr(dst)
-
-        flow_mod    = of.ofp_flow_mod
-        flow_mod.match = deny
-
-        event.connection.send(flow_mod)
-        print("Firewall registrado agregado.\n")
-
   def _handle_PacketIn (self, event):
     """
     Handle packet in messages from the switch to implement above algorithm.
@@ -168,78 +152,35 @@ class LearningSwitch (object):
     if packet.dst.is_multicast:
       flood() # 3a
     else:
-      if packet.dst not in self.macToPort: # 4
-        flood("Port for %s unknown -- flooding" % (packet.dst,)) # 4a
-      else:
-        port = self.macToPort[packet.dst]
-        if port == event.port: # 5
-          # 5a
-          log.warning("Same port for packet from %s -> %s on %s.%s.  Drop."
-              % (packet.src, packet.dst, dpid_to_str(event.dpid), port))
-          drop(10)
-          return
-        # 6
-        log.debug("installing flow for %s.%i -> %s.%i" %
-                  (packet.src, event.port, packet.dst, port))
+
         msg = of.ofp_flow_mod()
         msg.match = of.ofp_match.from_packet(packet, event.port)
         msg.idle_timeout = 10
         msg.hard_timeout = 30
 
-	## Lab 3 P2 Start
-        puerto = event.port
-        mac_src = str(packet.src)
-        mac_dst = str(packet.dst)
-        dst_port = -1
-
-        host_mac                       = ["1", "2", "3", "4"]
-        host_ports                     = [1, 2, 3, 4, 5, 6, 7] # 7 its a simplicity: make link s1 s2 easiest 
-        directional_inputs_ports       = [12, 34]              # DIP
-
-        directional_output_forwarding  = 100 # DOF
-        directional_output_pass        = 101 # DOP
-
-        directional_input_switchToHost = 14  # DISTH, Switch to host 1-4
-        directional_input_switchToServ = 56  # DISTS, Switch to server 5-6
-
         if packet.find("icmp"):
 
-          # Host-Switch
-          if puerto in host_ports:
-            dst_port = directional_output_forwarding
+          if self.macToPort[packet.dst] > 10:
 
-          # Switch 3,4 - Switch 1-2
-          elif puerto in directional_inputs:
+            msg.match   = of.ofp_match(dl_dst=packet.dst)
+            msg.command = of.OFPFC_MODIFY
 
-            # Debe forwardear al switch inferior o pasar?
-            if mac_dst[-1] in list(str(puerto)):
-              dst_port = directional_output_forwarding
-            else:
-              dst_port = directional_output_pass
+            self.macToPort[packet.dst] = 9
 
-          # Switch-Host
-          elif puerto == directional_input_switchToHost:
-
-            # Puerto equivale al ultimo digito de direccion MAC
-            dst_port = int(mac_dst[-1])
-
-          else:
-            print("Desconocido.")
+            if(event.port == 15 and packet.dst[-1] in ["3", "4"]):
+                self.macToPort[packet.dst] = 10
 
           print("=============================================================")
-          print("Entrando por  : ", puerto)
-          print("Desde la mac  : ", mac_src)
-          print("Hacia la mac  : ", mac_dst)
-          print("Redirigiendo a: ", dst_port)
+          print("Puerto de llegada: ", event.port)
+          print("Desde MAC        : ", packet.src)
+          print("Hacia MAC        : ", packet.dst)
+          print("Puerto de salida : ", self.macToPort[packet.dst])
+          print("MacToPort        :")
+          print(self.macToPort)
 
-          msg.actions.append(of.ofp_action_output(port = dst_port))
-          msg.data = event.ofp # 6a
-          self.connection.send(msg)
-
-        else:
-          msg.actions.append(of.ofp_action_output(port = port))
-          msg.data = event.ofp # 6a
-          self.connection.send(msg)
+        msg.actions.append(of.ofp_action_output(port = self.macToPort[packet.dst]))
+        msg.data = event.ofp # 6a
+        self.connection.send(msg)
 
 
 class l2_learning (object):
