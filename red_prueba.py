@@ -17,22 +17,21 @@ class Red1(Topo):
     s3 = self.addSwitch("s3")
     s4 = self.addSwitch("s4")
 
-    self.addLink(h1, s1, 9, 1)
-    self.addLink(h2, s1, 9, 2)
+    self.addLink(h1, s1, 10, 1)
+    self.addLink(h2, s1, 10, 2)
 
-    self.addLink(h3, s2, 9, 3)
-    self.addLink(h4, s2, 9, 4)
+    self.addLink(h3, s2, 10, 3)
+    self.addLink(h4, s2, 10, 4)
 
-    self.addLink(h5, s3, 9, 5)
-    self.addLink(h6, s3, 9, 6)
+    self.addLink(h5, s3, 10, 5)
+    self.addLink(h6, s3, 10, 6)
 
-    self.addLink(h7, s4, 9, 7)
-    self.addLink(h8, s4, 9, 8)
+    self.addLink(h7, s4, 10, 7)
+    self.addLink(h8, s4, 10, 8)
 
-    self.addLink(s1, s2, 12, 43)
-    self.addLink(s2, s3, 34, 65)
-    self.addLink(s3, s4, 56, 87)
-    self.addLink(s4, s1, 78, 21)
-
+    self.addLink(s1, s4, 9, 10)
+    self.addLink(s4, s3, 9, 10)
+    self.addLink(s3, s4, 9, 10)
+    self.addLink(s4, s1, 9, 10)
 
 topos = {"red1" : (lambda: Red1())}

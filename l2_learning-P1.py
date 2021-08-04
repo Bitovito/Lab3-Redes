@@ -166,66 +166,33 @@ class LearningSwitch (object):
         log.debug("installing flow for %s.%i -> %s.%i" %
                   (packet.src, event.port, packet.dst, port))
         msg = of.ofp_flow_mod()
-        msg.match = of.ofp_match.from_packet(packet, event.port)
+        #msg.match = of.ofp_match.from_packet(packet, event.port)
+        msg.match = of.ofp_matc(dl_dst=packet.dst)
         msg.idle_timeout = 10
         msg.hard_timeout = 30
 
-	## Lab 3 P1 Start
+	    ## Lab 3 P1 Start
         puerto = event.port
         mac_src = str(packet.src)
         mac_dst = str(packet.dst)
-        dst_port = -1
 
-        if packet.find("icmp"):
-          if puerto in [1, 2, 10]:
-            if mac_dst == "00:00:00:00:00:01":
-              dst_port = 1
-            elif mac_dst == "00:00:00:00:00:02":
-              dst_port = 2
-            else:
-              dst_port = 17
+        host_port = [1, 2, 3, 4, 5, 6, 7, 8]
+        if(puerto in host_port):
+          self.macToPort[mac_dst] = puerto
 
-          elif puerto in [3, 4, 11]:
-            if mac_dst == "00:00:00:00:00:03":
-              dst_port = 3
-            elif mac_dst == "00:00:00:00:00:04":
-              dst_port = 4
-            else:
-              dst_port = 14
+        if(mac_dst not in self.macToPort):
+          self.macToPort[mac_dst] = 9
 
-          elif puerto in [5, 6, 12]:
-            if mac_dst == "00:00:00:00:00:05":
-              dst_port = 5
-            elif mac_dst == "00:00:00:00:00:06":
-              dst_port = 6
-            else:
-              dst_port = 15
-
-          elif puerto in [7, 8, 13]:
-            if mac_dst == "00:00:00:00:00:07":
-              dst_port = 7
-            elif mac_dst == "00:00:00:00:00:08":
-              dst_port = 8
-            else:
-              dst_port = 16
-
-          else:
-            print("Desconocido.\n")
-
+        if(packet.find("icp")):
           print("=============================================================")
           print("Entrando por  : ", puerto)
           print("Desde la mac  : ", mac_src)
           print("Hacia la mac  : ", mac_dst)
-          print("Redirigiendo a: ", dst_port)
+          print("Redirigiendo a: ", self.macToPort[mac_dst])
 
-          msg.actions.append(of.ofp_action_output(port = dst_port))
-          msg.data = event.ofp # 6a
-          self.connection.send(msg)
-
-        else:
-          msg.actions.append(of.ofp_action_output(port = port))
-          msg.data = event.ofp # 6a
-          self.connection.send(msg)
+        msg.actions.append(of.ofp_action_output(port = self.macToPort[mac_dst]))
+        msg.data = event.ofp # 6a
+        self.connection.send(msg)
 
 
 class l2_learning (object):
