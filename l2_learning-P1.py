@@ -152,45 +152,38 @@ class LearningSwitch (object):
     if packet.dst.is_multicast:
       flood() # 3a
     else:
-      if packet.dst not in self.macToPort: # 4
-        flood("Port for %s unknown -- flooding" % (packet.dst,)) # 4a
-      else:
-        port = self.macToPort[packet.dst]
-        if port == event.port: # 5
-          # 5a
-          log.warning("Same port for packet from %s -> %s on %s.%s.  Drop."
-              % (packet.src, packet.dst, dpid_to_str(event.dpid), port))
-          drop(10)
-          return
-        # 6
-        log.debug("installing flow for %s.%i -> %s.%i" %
-                  (packet.src, event.port, packet.dst, port))
+
         msg = of.ofp_flow_mod()
-        #msg.match = of.ofp_match.from_packet(packet, event.port)
-        msg.match = of.ofp_matc(dl_dst=packet.dst)
+        msg.match = of.ofp_match.from_packet(packet, event.port)
         msg.idle_timeout = 10
         msg.hard_timeout = 30
 
-	    ## Lab 3 P1 Start
-        puerto = event.port
-        mac_src = str(packet.src)
-        mac_dst = str(packet.dst)
 
-        host_port = [1, 2, 3, 4, 5, 6, 7, 8]
-        if(puerto in host_port):
-          self.macToPort[mac_dst] = puerto
+        ## Confiamos en el controlador para el ruteo inicial. Luego,
+        ##  para cada intento de comunicacion, si la regla de la tabla
+        ##  exige tomar un camino contrario (Puertos > 10) modificamos
+        ##  la regla para ese destino (packet.dst)
 
-        if(mac_dst not in self.macToPort):
-          self.macToPort[mac_dst] = 9
+        ## En enunciado solo mencionan comunicacion por ping, para ir a la segura
+        ##  me limite a icmp
+        if packet.find("icmp"):
+          if self.macToPort[packet.dst] > 10:
+            msg.match   = of.ofp_match(dl_dst=packet.dst)   ## Buscar normas para llegar a este destino
+            msg.command = of.OFPFC_MODIFY                   ## El comando por defecto es agregar, ahora modificaremos
+            self.macToPort[packet.dst] = 9                  ## 9 es el puerto que tiene cada switch en la direccion corrcta
 
-        if(packet.find("icp")):
+          ## Permite trazar camino del paquete
+          ## La seleccion de los puertos de llegada, son de la forma "1x", x es
+          ##  el digito que representa al switch (1-4).
           print("=============================================================")
-          print("Entrando por  : ", puerto)
-          print("Desde la mac  : ", mac_src)
-          print("Hacia la mac  : ", mac_dst)
-          print("Redirigiendo a: ", self.macToPort[mac_dst])
+          print("Puerto de llegada: ", event.port)
+          print("Desde MAC        : ", packet.src)
+          print("Hacia MAC        : ", packet.dst)
+          print("Puerto de salida : ", self.macToPort[packet.dst])
+          print("MacToPort        :")
+          print(self.macToPort)
 
-        msg.actions.append(of.ofp_action_output(port = self.macToPort[mac_dst]))
+        msg.actions.append(of.ofp_action_output(port = self.macToPort[packet.dst]))
         msg.data = event.ofp # 6a
         self.connection.send(msg)
 

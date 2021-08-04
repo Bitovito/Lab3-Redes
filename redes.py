@@ -28,10 +28,9 @@ class Red1(Topo):
     self.addLink(h7, s4, 0, 7)
     self.addLink(h8, s4, 0, 8)
 
-    self.addLink(s1, s4, 0, 9)
-    self.addLink(s4, s3, 0, 9)
-    self.addLink(s3, s2, 0, 9)
-    self.addLink(s2, s1, 0, 9)
+    self.addLink(s1, s4, 9, 14)
+    self.addLink(s4, s3, 9, 13)
+    self.addLink(s3, s2, 9, 12)
+    self.addLink(s2, s1, 9, 11)
 
 topos = { "red1": (lambda: Red1()), "red2": (lambda: Red2())}
-
