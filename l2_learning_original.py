@@ -169,29 +169,6 @@ class LearningSwitch (object):
         msg.match = of.ofp_match.from_packet(packet, event.port)
         msg.idle_timeout = 10
         msg.hard_timeout = 30
-
-        host_mac = "1234"
-
-        mac_src = str(packet.src)[-1]
-        mac_dst = str(packet.dst)[-1]
-
-        ## Firewall
-        ##   leimos que se podia implementar en un componente aparte
-        ##   preferimos, basado en que se debe entregar un archivo,
-        ##   solo implementarlo en este controlador en lugar de registrar
-        ##   uno nuevo.
-        if mac_src in host_mac and mac_dst in host_mac:
-            print("Prohibida conexion H-H:", mac_src, mac_dst)
-            drop(10)
-            return
-
-        if (mac_src in "12" and mac_dst == "6") or (mac_src in "34" and mac_dst == "5"):
-            print("Prohibida conexion de este host con servidor:", mac_src, mac_dst)
-            drop(10)
-            return
-
-
-
         msg.actions.append(of.ofp_action_output(port = port))
         msg.data = event.ofp # 6a
         self.connection.send(msg)
